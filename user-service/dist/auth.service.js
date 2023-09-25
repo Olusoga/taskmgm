@@ -20,7 +20,6 @@ const jwt_1 = require("@nestjs/jwt");
 const typeorm_2 = require("typeorm");
 const axios_1 = require("@nestjs/axios");
 const user_entity_1 = require("./user.entity");
-const console_1 = require("console");
 const custom_exception_1 = require("./error/custom.exception");
 let AuthService = class AuthService {
     constructor(userRepository, connection, httpService, jwtService) {
@@ -51,7 +50,7 @@ let AuthService = class AuthService {
     async signUp(authCredentialsDto) {
         const user = await this.findOne(authCredentialsDto.username);
         if (user)
-            throw console_1.error;
+            throw new common_1.ConflictException(' user already exist');
         const saltOrRounds = 10;
         const password = authCredentialsDto.password;
         const hashed = await bcrypt.hash(password, saltOrRounds);
@@ -62,6 +61,10 @@ let AuthService = class AuthService {
         catch (error) {
             throw new custom_exception_1.CustomException('An error occurred during processing', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+    async findUserById(id) {
+        const user = await this.userRepository.findOne({ where: { id: id } });
+        return user;
     }
 };
 exports.AuthService = AuthService;

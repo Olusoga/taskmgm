@@ -4,11 +4,11 @@ exports.databaseConfig = void 0;
 const user_entity_1 = require("../user.entity");
 exports.databaseConfig = {
     type: 'postgres',
-    host: 'localhost',
-    port: 5432,
-    username: 'postgres',
-    password: 'password',
-    database: 'taskmgm_user',
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT),
+    username: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_DB_NAME,
     autoLoadEntities: true,
     synchronize: true,
     entities: [user_entity_1.User],

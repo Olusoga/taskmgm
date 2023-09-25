@@ -12,9 +12,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const common_1 = require("@nestjs/common");
 const rabbitmq_service_1 = require("./rabbitmq/rabbitmq.service");
+const auth_service_1 = require("./auth.service");
+const mail_1 = require("./mail");
 let UserService = class UserService {
-    constructor(rabbitMQService) {
+    constructor(rabbitMQService, authService) {
         this.rabbitMQService = rabbitMQService;
+        this.authService = authService;
     }
     onModuleInit() {
         this.rabbitMQService.consume('task-assignment', (message) => {
@@ -24,19 +27,27 @@ let UserService = class UserService {
             this.handleTaskDueNotificationMessage(message);
         });
     }
-    handleTaskAssignmentMessage(message) {
+    async handleTaskAssignmentMessage(message) {
         try {
             const { userIds, taskId } = JSON.parse(message);
-            console.log(`User ${userIds} has been assigned to task ${taskId}`);
+            const emailBody = `User ${userIds} has been assigned to task ${taskId}`;
+            for (const userId of userIds) {
+                const user = await this.authService.findUserById(userId);
+                return (0, mail_1.sendEmailForTaskAssignment)(user.email, emailBody);
+            }
         }
         catch (error) {
             console.error('Error handling task assignment message:', error);
         }
     }
-    handleTaskDueNotificationMessage(message) {
+    async handleTaskDueNotificationMessage(message) {
         try {
-            const { taskId } = JSON.parse(message);
-            console.log(`Task ${taskId} is overdue. Notify users.`);
+            const { userIds, taskId } = JSON.parse(message);
+            const emailBody = `Task ${taskId} is overdue. Notify users.`;
+            for (const userId of userIds) {
+                const user = await this.authService.findUserById(userId);
+                return (0, mail_1.sendEmailForTaskDue)(user.email, emailBody);
+            }
         }
         catch (error) {
             console.error('Error handling task overdue notification message:', error);
@@ -46,6 +57,7 @@ let UserService = class UserService {
 exports.UserService = UserService;
 exports.UserService = UserService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [rabbitmq_service_1.RabbitMQService])
+    __metadata("design:paramtypes", [rabbitmq_service_1.RabbitMQService,
+        auth_service_1.AuthService])
 ], UserService);
 //# sourceMappingURL=user.service.js.map

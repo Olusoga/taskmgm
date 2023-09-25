@@ -32,7 +32,6 @@ let RabbitMQService = class RabbitMQService {
     }
     async publish(queue, message) {
         if (this.channel) {
-            console.log(`consuming message to queue "${queue}": ${message}`);
             this.channel.sendToQueue(queue, Buffer.from(message));
         }
         else {
@@ -41,7 +40,6 @@ let RabbitMQService = class RabbitMQService {
     }
     async consume(queue, callback) {
         if (this.channel) {
-            console.log(`consuming message to queue "${queue}": ${callback}`);
             this.channel.consume(queue, (msg) => {
                 if (msg) {
                     const message = msg.content.toString();

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Task } from './task.entity';
 import { RabbitMQService } from './rabbitmq/rabbitmq.service';
+import redisClient from './utils/redis';
 
 @Injectable()
 export class TaskService {
@@ -13,8 +14,26 @@ export class TaskService {
     private readonly rabbitMQService: RabbitMQService,
   ) {}
 
-  async findById(id: string): Promise<Task> {
-    return this.taskRepository.findOne({ where: { id: id } });
+  async findById(id: string) {
+    const redisKey = `task:${id}`;
+
+    // Check if the data is cached in Redis
+    const cachedTask = await redisClient.get(redisKey);
+    if (cachedTask) {
+      return JSON.parse(cachedTask);
+    }
+
+    // If not cached, fetch from the database
+    const task = await this.taskRepository.findOne({ where: { id: id } });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    // Cache the fetched data in Redis with an optional expiration time (ttl)
+    await redisClient.set(redisKey, JSON.stringify(task), 'EX', 3600); // Cache for 1 hour
+
+    return task;
   }
 
   async create(taskData: Partial<Task>) {

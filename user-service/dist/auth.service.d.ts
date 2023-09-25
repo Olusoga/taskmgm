@@ -13,6 +13,8 @@ export declare class AuthService {
     validateUser(username: string, pass: any): Promise<{
         id: string;
         username: string;
+        email: string;
     }>;
     signUp(authCredentialsDto: AuthCredentialsDto): Promise<User>;
+    findUserById(id: string): Promise<User>;
 }

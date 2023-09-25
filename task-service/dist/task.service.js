@@ -16,15 +16,27 @@ exports.TaskService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const schedule_1 = require("@nestjs/schedule");
 const task_entity_1 = require("./task.entity");
 const rabbitmq_service_1 = require("./rabbitmq/rabbitmq.service");
+const redis_1 = require("./utils/redis");
 let TaskService = class TaskService {
     constructor(taskRepository, rabbitMQService) {
         this.taskRepository = taskRepository;
         this.rabbitMQService = rabbitMQService;
     }
     async findById(id) {
-        return this.taskRepository.findOne({ where: { id: id } });
+        const redisKey = `task:${id}`;
+        const cachedTask = await redis_1.default.get(redisKey);
+        if (cachedTask) {
+            return JSON.parse(cachedTask);
+        }
+        const task = await this.taskRepository.findOne({ where: { id: id } });
+        if (!task) {
+            throw new common_1.NotFoundException('Task not found');
+        }
+        await redis_1.default.set(redisKey, JSON.stringify(task), 'EX', 3600);
+        return task;
     }
     async create(taskData) {
         const task = await this.taskRepository.create(taskData);
@@ -48,8 +60,28 @@ let TaskService = class TaskService {
         await this.rabbitMQService.publish('task-assignment', message);
         return updatedTask;
     }
+    async checkTaskDueDates() {
+        const now = new Date();
+        const overdueTasks = await this.taskRepository
+            .createQueryBuilder('task')
+            .where('task.dueDate <= :now', { now })
+            .getMany();
+        for (const task of overdueTasks) {
+            const message = JSON.stringify({
+                taskId: task.id,
+                userIds: task.assignedUserIds,
+            });
+            await this.rabbitMQService.publish('task-due-notification', message);
+        }
+    }
 };
 exports.TaskService = TaskService;
+__decorate([
+    (0, schedule_1.Cron)(schedule_1.CronExpression.EVERY_HOUR),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TaskService.prototype, "checkTaskDueDates", null);
 exports.TaskService = TaskService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(task_entity_1.Task)),

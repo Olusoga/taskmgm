@@ -31,6 +31,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Task.prototype, "completed", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Date)
+], Task.prototype, "dueDate", void 0);
+__decorate([
     (0, typeorm_1.Column)('simple-array', { default: [] }),
     __metadata("design:type", Array)
 ], Task.prototype, "assignedUserIds", void 0);

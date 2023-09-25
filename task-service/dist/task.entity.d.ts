@@ -3,5 +3,6 @@ export declare class Task {
     title: string;
     description: string;
     completed: boolean;
+    dueDate: Date;
     assignedUserIds: string[];
 }
